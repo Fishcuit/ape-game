@@ -2,22 +2,28 @@ import React, { useEffect } from "react";
 import * as PIXI from "pixi.js";
 import { TweenLite } from "gsap";
 
-const symbols = ["🍎", "🍇", "🍉", "🍋", "🍒", "🍊", "⭐"];
+const symbolSets = [
+  ["🍎", "🍇", "🍉", "🍋", "🍒", "🍊", "⭐"],
+  ["🍎", "🍒", "🍉", "🍋", "🍇", "🍊", "⭐"],
+  ["🍊", "🍇", "🍉", "🍋", "🍒", "🍎", "⭐"],
+  ["🍇", "🍒", "🍉", "🍋", "🍎", "🍊", "⭐"],
+  ["🍉", "🍇", "🍎", "🍋", "🍒", "🍊", "⭐"],
+];
 
 function getRandomSymbol() {
   const randomIndex = Math.floor(Math.random() * symbols.length);
   return symbols[randomIndex];
 }
 
-function createReel(app) {
+function createReel(app, symbolSet) {
   const reel = new PIXI.Container();
   const symbolHeight = 100;
   const visibleSymbols = 5;
   const bufferSymbols = 1; // Number of symbols above and below the visible area
 
-  for (let i = 0; i < symbols.length + bufferSymbols * 2; i++) {
+  for (let i = 0; i < symbolSet.length + bufferSymbols * 2; i++) {
     const symbolText = new PIXI.Text(
-      symbols[i % symbols.length],
+      symbolSet[i % symbolSet.length],
       new PIXI.TextStyle({
         fontSize: 70,
         fontFamily: "Arial",
@@ -38,7 +44,7 @@ function spin(reel, onComplete) {
   const bufferSymbols = 1;
 
   const startPosition = reel.y;
-  const randomSpin = Math.floor(Math.random() * 5 + 4) * 5;
+  const randomSpin = Math.floor(Math.random() * 5 + 4) * 8;
   const spinAmount = randomSpin * symbolHeight;
 
   const startTime = Date.now();
@@ -71,11 +77,20 @@ function spin(reel, onComplete) {
 }
 
 function evaluatePayout(reels) {
-  let counts = {};
+  let topCounts = {};
+  let middleCounts = {};
+  let bottomCounts = {};
 
   reels.forEach((reel) => {
     const symbolHeight = 100;
     const middleYPosition = -reel.y + 2 * symbolHeight;
+    const topYPosition = -reel.y + 1 * symbolHeight;
+    const bottomYPosition = -reel.y + 3 * symbolHeight;
+
+    const topSymbol = reel.children.find(
+      (symbolText) =>
+        symbolText.y >= topYPosition - 5 && symbolText.y <= topYPosition + 5
+    ).text;
 
     const middleSymbol = reel.children.find(
       (symbolText) =>
@@ -83,14 +98,33 @@ function evaluatePayout(reels) {
         symbolText.y <= middleYPosition + 5
     ).text;
 
-    if (middleSymbol in counts) {
-      counts[middleSymbol] += 1;
+    const bottomSymbol = reel.children.find(
+      (symbolText) =>
+        symbolText.y >= bottomYPosition - 5 &&
+        symbolText.y <= bottomYPosition + 5
+    ).text;
+
+    if (bottomSymbol in bottomCounts) {
+      bottomCounts[bottomSymbol] += 1;
     } else {
-      counts[middleSymbol] = 1;
+      bottomCounts[bottomSymbol] = 1;
+    }
+
+    if (middleSymbol in middleCounts) {
+      middleCounts[middleSymbol] += 1;
+    } else {
+      middleCounts[middleSymbol] = 1;
+    }
+
+    if (topSymbol in topCounts) {
+      topCounts[topSymbol] += 1;
+    } else {
+      topCounts[topSymbol] = 1;
     }
   });
-
-  console.log(counts);
+  console.log(bottomCounts);
+  console.log(middleCounts);
+  console.log(topCounts);
 }
 
 const PixiSlotMachine = () => {
@@ -106,7 +140,7 @@ const PixiSlotMachine = () => {
 
     const reelSpacing = 160;
     for (let i = 0; i < 5; i++) {
-      const reel = createReel(app);
+      const reel = createReel(app, symbolSets[i]);
       reel.x = i * reelSpacing + 120;
       reel.y = 100;
       app.stage.addChild(reel);
